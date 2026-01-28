@@ -453,3 +453,225 @@ jfieldID JNIUtils::findBooleanField(jclass clazz, int index) {
     
     return result;
 }
+
+jfieldID JNIUtils::findDoubleField(jclass clazz, int index) {
+    if (!env || !clazz) return nullptr;
+    
+    // Get the Class object methods
+    jclass classClass = env->FindClass("java/lang/Class");
+    if (!classClass) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        return nullptr;
+    }
+    
+    jmethodID getDeclaredFieldsMethod = env->GetMethodID(classClass, "getDeclaredFields", "()[Ljava/lang/reflect/Field;");
+    if (!getDeclaredFieldsMethod) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    // Get all fields
+    jobjectArray fields = (jobjectArray)env->CallObjectMethod(clazz, getDeclaredFieldsMethod);
+    if (!fields || env->ExceptionCheck()) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    jint fieldCount = env->GetArrayLength(fields);
+    
+    // Get Field class methods
+    jclass fieldClass = env->FindClass("java/lang/reflect/Field");
+    jmethodID getNameMethod = env->GetMethodID(fieldClass, "getName", "()Ljava/lang/String;");
+    jmethodID getTypeMethod = env->GetMethodID(fieldClass, "getType", "()Ljava/lang/Class;");
+    
+    if (!getNameMethod || !getTypeMethod) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(fields);
+        env->DeleteLocalRef(fieldClass);
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    // Get the double primitive type
+    jclass doubleClass = env->FindClass("java/lang/Double");
+    jfieldID typeFieldID = env->GetStaticFieldID(doubleClass, "TYPE", "Ljava/lang/Class;");
+    jobject doubleType = nullptr;
+    if (typeFieldID) {
+        doubleType = env->GetStaticObjectField(doubleClass, typeFieldID);
+    }
+    if (!doubleType) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(doubleClass);
+        env->DeleteLocalRef(fieldClass);
+        env->DeleteLocalRef(fields);
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    jfieldID result = nullptr;
+    int currentIndex = 0;
+    
+    // Iterate through fields looking for double fields
+    for (jint i = 0; i < fieldCount; i++) {
+        jobject field = env->GetObjectArrayElement(fields, i);
+        if (!field) continue;
+        
+        // Get field type
+        jobject fieldType = env->CallObjectMethod(field, getTypeMethod);
+        if (!fieldType) {
+            if (env->ExceptionCheck()) env->ExceptionClear();
+            env->DeleteLocalRef(field);
+            continue;
+        }
+        
+        // Check if it's a double
+        if (env->IsSameObject(fieldType, doubleType)) {
+            if (currentIndex == index) {
+                // Get field name
+                jstring fieldName = (jstring)env->CallObjectMethod(field, getNameMethod);
+                if (fieldName) {
+                    const char* nameStr = env->GetStringUTFChars(fieldName, nullptr);
+                    std::string fieldNameStr(nameStr);
+                    env->ReleaseStringUTFChars(fieldName, nameStr);
+                    
+                    // Get the field ID
+                    result = env->GetFieldID(clazz, fieldNameStr.c_str(), "D");
+                    if (env->ExceptionCheck()) {
+                        env->ExceptionClear();
+                        result = nullptr;
+                    }
+                    
+                    env->DeleteLocalRef(fieldName);
+                }
+                env->DeleteLocalRef(fieldType);
+                env->DeleteLocalRef(field);
+                break;
+            }
+            currentIndex++;
+        }
+        
+        env->DeleteLocalRef(fieldType);
+        env->DeleteLocalRef(field);
+    }
+    
+    env->DeleteLocalRef(doubleType);
+    env->DeleteLocalRef(doubleClass);
+    env->DeleteLocalRef(fieldClass);
+    env->DeleteLocalRef(fields);
+    env->DeleteLocalRef(classClass);
+    
+    return result;
+}
+
+jfieldID JNIUtils::findFloatField(jclass clazz, int index) {
+    if (!env || !clazz) return nullptr;
+    
+    // Get the Class object methods
+    jclass classClass = env->FindClass("java/lang/Class");
+    if (!classClass) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        return nullptr;
+    }
+    
+    jmethodID getDeclaredFieldsMethod = env->GetMethodID(classClass, "getDeclaredFields", "()[Ljava/lang/reflect/Field;");
+    if (!getDeclaredFieldsMethod) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    // Get all fields
+    jobjectArray fields = (jobjectArray)env->CallObjectMethod(clazz, getDeclaredFieldsMethod);
+    if (!fields || env->ExceptionCheck()) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    jint fieldCount = env->GetArrayLength(fields);
+    
+    // Get Field class methods
+    jclass fieldClass = env->FindClass("java/lang/reflect/Field");
+    jmethodID getNameMethod = env->GetMethodID(fieldClass, "getName", "()Ljava/lang/String;");
+    jmethodID getTypeMethod = env->GetMethodID(fieldClass, "getType", "()Ljava/lang/Class;");
+    
+    if (!getNameMethod || !getTypeMethod) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(fields);
+        env->DeleteLocalRef(fieldClass);
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    // Get the float primitive type
+    jclass floatClass = env->FindClass("java/lang/Float");
+    jfieldID typeFieldID = env->GetStaticFieldID(floatClass, "TYPE", "Ljava/lang/Class;");
+    jobject floatType = nullptr;
+    if (typeFieldID) {
+        floatType = env->GetStaticObjectField(floatClass, typeFieldID);
+    }
+    if (!floatType) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        env->DeleteLocalRef(floatClass);
+        env->DeleteLocalRef(fieldClass);
+        env->DeleteLocalRef(fields);
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    jfieldID result = nullptr;
+    int currentIndex = 0;
+    
+    // Iterate through fields looking for float fields
+    for (jint i = 0; i < fieldCount; i++) {
+        jobject field = env->GetObjectArrayElement(fields, i);
+        if (!field) continue;
+        
+        // Get field type
+        jobject fieldType = env->CallObjectMethod(field, getTypeMethod);
+        if (!fieldType) {
+            if (env->ExceptionCheck()) env->ExceptionClear();
+            env->DeleteLocalRef(field);
+            continue;
+        }
+        
+        // Check if it's a float
+        if (env->IsSameObject(fieldType, floatType)) {
+            if (currentIndex == index) {
+                // Get field name
+                jstring fieldName = (jstring)env->CallObjectMethod(field, getNameMethod);
+                if (fieldName) {
+                    const char* nameStr = env->GetStringUTFChars(fieldName, nullptr);
+                    std::string fieldNameStr(nameStr);
+                    env->ReleaseStringUTFChars(fieldName, nameStr);
+                    
+                    // Get the field ID
+                    result = env->GetFieldID(clazz, fieldNameStr.c_str(), "F");
+                    if (env->ExceptionCheck()) {
+                        env->ExceptionClear();
+                        result = nullptr;
+                    }
+                    
+                    env->DeleteLocalRef(fieldName);
+                }
+                env->DeleteLocalRef(fieldType);
+                env->DeleteLocalRef(field);
+                break;
+            }
+            currentIndex++;
+        }
+        
+        env->DeleteLocalRef(fieldType);
+        env->DeleteLocalRef(field);
+    }
+    
+    env->DeleteLocalRef(floatType);
+    env->DeleteLocalRef(floatClass);
+    env->DeleteLocalRef(fieldClass);
+    env->DeleteLocalRef(fields);
+    env->DeleteLocalRef(classClass);
+    
+    return result;
+}

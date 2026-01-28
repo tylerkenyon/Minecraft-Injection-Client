@@ -45,6 +45,8 @@ public:
     // Field introspection - find field by signature alone
     jfieldID findFieldBySignature(jclass clazz, const std::string& signature);
     jfieldID findBooleanField(jclass clazz, int index = 0);
+    jfieldID findDoubleField(jclass clazz, int index = 0);
+    jfieldID findFloatField(jclass clazz, int index = 0);
 
 private:
     JNIUtils();

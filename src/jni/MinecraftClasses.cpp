@@ -145,35 +145,51 @@ bool MinecraftClasses::findEntityClass() {
     
     LOG_INFO("Found Entity class");
     
-    // Get position fields
+    // Get position fields - try deobfuscated names first
+    // In Entity class, posX/Y/Z are typically the first 3 double fields
     entityFields.posX = jni.getFieldID(entityClass, "posX", "D");
     if (!entityFields.posX) entityFields.posX = jni.getFieldID(entityClass, "s", "D");
+    if (!entityFields.posX) entityFields.posX = jni.findDoubleField(entityClass, 0);
     
     entityFields.posY = jni.getFieldID(entityClass, "posY", "D");
     if (!entityFields.posY) entityFields.posY = jni.getFieldID(entityClass, "t", "D");
+    if (!entityFields.posY) entityFields.posY = jni.findDoubleField(entityClass, 1);
     
     entityFields.posZ = jni.getFieldID(entityClass, "posZ", "D");
     if (!entityFields.posZ) entityFields.posZ = jni.getFieldID(entityClass, "u", "D");
+    if (!entityFields.posZ) entityFields.posZ = jni.findDoubleField(entityClass, 2);
     
-    // Get rotation fields
+    // Get rotation fields (typically among first float fields)
     entityFields.rotationYaw = jni.getFieldID(entityClass, "rotationYaw", "F");
     if (!entityFields.rotationYaw) entityFields.rotationYaw = jni.getFieldID(entityClass, "y", "F");
+    if (!entityFields.rotationYaw) entityFields.rotationYaw = jni.findFloatField(entityClass, 0);
     
     entityFields.rotationPitch = jni.getFieldID(entityClass, "rotationPitch", "F");
     if (!entityFields.rotationPitch) entityFields.rotationPitch = jni.getFieldID(entityClass, "z", "F");
+    if (!entityFields.rotationPitch) entityFields.rotationPitch = jni.findFloatField(entityClass, 1);
     
-    // Get motion fields
+    // Get motion fields (typically indices 3-5 for double fields)
     entityFields.motionX = jni.getFieldID(entityClass, "motionX", "D");
     if (!entityFields.motionX) entityFields.motionX = jni.getFieldID(entityClass, "v", "D");
+    if (!entityFields.motionX) entityFields.motionX = jni.findDoubleField(entityClass, 3);
     
     entityFields.motionY = jni.getFieldID(entityClass, "motionY", "D");
     if (!entityFields.motionY) entityFields.motionY = jni.getFieldID(entityClass, "w", "D");
+    if (!entityFields.motionY) entityFields.motionY = jni.findDoubleField(entityClass, 4);
     
     entityFields.motionZ = jni.getFieldID(entityClass, "motionZ", "D");
     if (!entityFields.motionZ) entityFields.motionZ = jni.getFieldID(entityClass, "x", "D");
+    if (!entityFields.motionZ) entityFields.motionZ = jni.findDoubleField(entityClass, 5);
     
     entityFields.onGround = jni.getFieldID(entityClass, "onGround", "Z");
     if (!entityFields.onGround) entityFields.onGround = jni.getFieldID(entityClass, "C", "Z");
+    // Could use findBooleanField here if needed, but onGround is less critical
+    
+    if (entityFields.posX && entityFields.posY && entityFields.posZ) {
+        LOG_INFO("Found Entity position fields");
+    } else {
+        LOG_ERROR("Failed to find some Entity position fields");
+    }
     
     return true;
 }
