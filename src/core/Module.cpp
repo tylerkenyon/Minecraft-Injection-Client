@@ -6,6 +6,7 @@ Module::Module(const std::string& name, const std::string& description)
     , description(description)
     , enabled(false)
     , keyBind(0) {
+    registerEventHandlers();
 }
 
 Module::~Module() {
@@ -28,7 +29,6 @@ void Module::enable() {
     enabled = true;
     LOG_INFO("Module enabled: " + name);
     
-    registerEventHandlers();
     onEnable();
 }
 

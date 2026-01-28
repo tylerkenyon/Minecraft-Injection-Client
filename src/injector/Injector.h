@@ -13,6 +13,9 @@ public:
 private:
     // Find process ID by name
     static DWORD getProcessIdByName(const std::string& processName);
+
+    // Enable SeDebugPrivilege for better access to target processes
+    static bool enableDebugPrivilege();
     
     // Perform the actual injection
     static bool performInjection(HANDLE hProcess, const std::string& dllPath);
