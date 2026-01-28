@@ -1,5 +1,6 @@
 #include "MinecraftClasses.h"
 #include "JNIUtils.h"
+#include "MappingLoader.h"
 #include "../utils/Logger.h"
 
 MinecraftClasses& MinecraftClasses::getInstance() {
@@ -52,6 +53,7 @@ bool MinecraftClasses::initialize() {
 
 bool MinecraftClasses::findMinecraftClass() {
     auto& jni = JNIUtils::getInstance();
+    auto& mappings = MappingLoader::getInstance();
     
     // Try to find Minecraft class (MCP name in 1.8.9)
     minecraftClass = jni.findClass("net/minecraft/client/Minecraft");
@@ -68,7 +70,7 @@ bool MinecraftClasses::findMinecraftClass() {
     LOG_INFO("Found Minecraft class");
     
     // Get theMinecraft static field (singleton instance)
-    // Try MCP name first
+    // field_71432_P -> theMinecraft
     theMinecraftField = jni.getStaticFieldID(minecraftClass, "theMinecraft", "Lnet/minecraft/client/Minecraft;");
     
     if (!theMinecraftField) {
@@ -76,13 +78,13 @@ bool MinecraftClasses::findMinecraftClass() {
         theMinecraftField = jni.getStaticFieldID(minecraftClass, "S", "Lave;");
     }
     
-    // Get thePlayer field
+    // field_71439_g -> thePlayer
     thePlayerField = jni.getFieldID(minecraftClass, "thePlayer", "Lnet/minecraft/client/entity/EntityPlayerSP;");
     if (!thePlayerField) {
         thePlayerField = jni.getFieldID(minecraftClass, "h", "Lbew;");
     }
     
-    // Get theWorld field
+    // field_71441_e -> theWorld
     theWorldField = jni.getFieldID(minecraftClass, "theWorld", "Lnet/minecraft/client/multiplayer/WorldClient;");
     if (!theWorldField) {
         theWorldField = jni.getFieldID(minecraftClass, "f", "Lbdb;");
@@ -93,6 +95,7 @@ bool MinecraftClasses::findMinecraftClass() {
 
 bool MinecraftClasses::findEntityPlayerClass() {
     auto& jni = JNIUtils::getInstance();
+    auto& mappings = MappingLoader::getInstance();
     
     entityPlayerClass = jni.findClass("net/minecraft/client/entity/EntityPlayerSP");
     
@@ -106,7 +109,7 @@ bool MinecraftClasses::findEntityPlayerClass() {
     
     LOG_INFO("Found EntityPlayerSP class");
     
-    // Get capabilities field - try deobfuscated name first
+    // field_71075_bZ -> capabilities
     capabilitiesField = jni.getFieldID(entityPlayerClass, "capabilities", "Lnet/minecraft/entity/player/PlayerCapabilities;");
     if (!capabilitiesField) {
         // Try known obfuscated signature
@@ -132,6 +135,7 @@ bool MinecraftClasses::findEntityPlayerClass() {
 
 bool MinecraftClasses::findEntityClass() {
     auto& jni = JNIUtils::getInstance();
+    auto& mappings = MappingLoader::getInstance();
     
     entityClass = jni.findClass("net/minecraft/entity/Entity");
     
@@ -145,45 +149,49 @@ bool MinecraftClasses::findEntityClass() {
     
     LOG_INFO("Found Entity class");
     
-    // Get position fields - try deobfuscated names first
-    // In Entity class, posX/Y/Z are typically the first 3 double fields
+    // field_70165_t -> posX
     entityFields.posX = jni.getFieldID(entityClass, "posX", "D");
     if (!entityFields.posX) entityFields.posX = jni.getFieldID(entityClass, "s", "D");
     if (!entityFields.posX) entityFields.posX = jni.findDoubleField(entityClass, 0);
     
+    // field_70163_u -> posY
     entityFields.posY = jni.getFieldID(entityClass, "posY", "D");
     if (!entityFields.posY) entityFields.posY = jni.getFieldID(entityClass, "t", "D");
     if (!entityFields.posY) entityFields.posY = jni.findDoubleField(entityClass, 1);
     
+    // field_70161_v -> posZ
     entityFields.posZ = jni.getFieldID(entityClass, "posZ", "D");
     if (!entityFields.posZ) entityFields.posZ = jni.getFieldID(entityClass, "u", "D");
     if (!entityFields.posZ) entityFields.posZ = jni.findDoubleField(entityClass, 2);
     
-    // Get rotation fields (typically among first float fields)
+    // field_70177_z -> rotationYaw
     entityFields.rotationYaw = jni.getFieldID(entityClass, "rotationYaw", "F");
     if (!entityFields.rotationYaw) entityFields.rotationYaw = jni.getFieldID(entityClass, "y", "F");
     if (!entityFields.rotationYaw) entityFields.rotationYaw = jni.findFloatField(entityClass, 0);
     
+    // field_70125_A -> rotationPitch
     entityFields.rotationPitch = jni.getFieldID(entityClass, "rotationPitch", "F");
     if (!entityFields.rotationPitch) entityFields.rotationPitch = jni.getFieldID(entityClass, "z", "F");
     if (!entityFields.rotationPitch) entityFields.rotationPitch = jni.findFloatField(entityClass, 1);
     
-    // Get motion fields (typically indices 3-5 for double fields)
+    // field_70159_w -> motionX
     entityFields.motionX = jni.getFieldID(entityClass, "motionX", "D");
     if (!entityFields.motionX) entityFields.motionX = jni.getFieldID(entityClass, "v", "D");
     if (!entityFields.motionX) entityFields.motionX = jni.findDoubleField(entityClass, 3);
     
+    // field_70181_x -> motionY
     entityFields.motionY = jni.getFieldID(entityClass, "motionY", "D");
     if (!entityFields.motionY) entityFields.motionY = jni.getFieldID(entityClass, "w", "D");
     if (!entityFields.motionY) entityFields.motionY = jni.findDoubleField(entityClass, 4);
     
+    // field_70179_y -> motionZ
     entityFields.motionZ = jni.getFieldID(entityClass, "motionZ", "D");
     if (!entityFields.motionZ) entityFields.motionZ = jni.getFieldID(entityClass, "x", "D");
     if (!entityFields.motionZ) entityFields.motionZ = jni.findDoubleField(entityClass, 5);
     
+    // field_70122_E -> onGround
     entityFields.onGround = jni.getFieldID(entityClass, "onGround", "Z");
     if (!entityFields.onGround) entityFields.onGround = jni.getFieldID(entityClass, "C", "Z");
-    // Could use findBooleanField here if needed, but onGround is less critical
     
     if (entityFields.posX && entityFields.posY && entityFields.posZ) {
         LOG_INFO("Found Entity position fields");
@@ -196,6 +204,7 @@ bool MinecraftClasses::findEntityClass() {
 
 bool MinecraftClasses::findWorldClass() {
     auto& jni = JNIUtils::getInstance();
+    auto& mappings = MappingLoader::getInstance();
     
     worldClass = jni.findClass("net/minecraft/world/World");
     
@@ -209,8 +218,7 @@ bool MinecraftClasses::findWorldClass() {
     
     LOG_INFO("Found World class");
     
-    // Get loadedEntityList field (it's actually a field, not a method)
-    // We'll use getFieldID instead
+    // field_72996_f -> loadedEntityList
     loadedEntityListField = jni.getFieldID(worldClass, "loadedEntityList", "Ljava/util/List;");
     if (!loadedEntityListField) {
         loadedEntityListField = jni.getFieldID(worldClass, "h", "Ljava/util/List;");
@@ -221,6 +229,7 @@ bool MinecraftClasses::findWorldClass() {
 
 bool MinecraftClasses::findPlayerCapabilitiesClass() {
     auto& jni = JNIUtils::getInstance();
+    auto& mappings = MappingLoader::getInstance();
     
     playerCapabilitiesClass = jni.findClass("net/minecraft/entity/player/PlayerCapabilities");
     
@@ -234,46 +243,39 @@ bool MinecraftClasses::findPlayerCapabilitiesClass() {
     
     LOG_INFO("Found PlayerCapabilities class");
     
-    // Get capability fields - try deobfuscated names first
-    // PlayerCapabilities has 4 boolean fields in order:
-    // 0: disableDamage (a)
-    // 1: allowFlying (b)  
-    // 2: isFlying (c)
-    // 3: isCreativeMode (d)
-    
+    // field_75100_b -> isFlying (index 2)
     playerCapabilities.isFlying = jni.getFieldID(playerCapabilitiesClass, "isFlying", "Z");
     if (!playerCapabilities.isFlying) {
         playerCapabilities.isFlying = jni.getFieldID(playerCapabilitiesClass, "c", "Z");
     }
     if (!playerCapabilities.isFlying) {
-        // Use introspection - isFlying is the 3rd boolean field (index 2)
         playerCapabilities.isFlying = jni.findBooleanField(playerCapabilitiesClass, 2);
     }
     
+    // field_75101_c -> allowFlying (index 1)
     playerCapabilities.allowFlying = jni.getFieldID(playerCapabilitiesClass, "allowFlying", "Z");
     if (!playerCapabilities.allowFlying) {
         playerCapabilities.allowFlying = jni.getFieldID(playerCapabilitiesClass, "b", "Z");
     }
     if (!playerCapabilities.allowFlying) {
-        // Use introspection - allowFlying is the 2nd boolean field (index 1)
         playerCapabilities.allowFlying = jni.findBooleanField(playerCapabilitiesClass, 1);
     }
     
+    // field_75102_a -> disableDamage (index 0)
     playerCapabilities.disableDamage = jni.getFieldID(playerCapabilitiesClass, "disableDamage", "Z");
     if (!playerCapabilities.disableDamage) {
         playerCapabilities.disableDamage = jni.getFieldID(playerCapabilitiesClass, "a", "Z");
     }
     if (!playerCapabilities.disableDamage) {
-        // Use introspection - disableDamage is the 1st boolean field (index 0)
         playerCapabilities.disableDamage = jni.findBooleanField(playerCapabilitiesClass, 0);
     }
     
+    // field_75098_d -> isCreativeMode (index 3)
     playerCapabilities.isCreativeMode = jni.getFieldID(playerCapabilitiesClass, "isCreativeMode", "Z");
     if (!playerCapabilities.isCreativeMode) {
         playerCapabilities.isCreativeMode = jni.getFieldID(playerCapabilitiesClass, "d", "Z");
     }
     if (!playerCapabilities.isCreativeMode) {
-        // Use introspection - isCreativeMode is the 4th boolean field (index 3)
         playerCapabilities.isCreativeMode = jni.findBooleanField(playerCapabilitiesClass, 3);
     }
     

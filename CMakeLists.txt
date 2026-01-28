@@ -19,6 +19,8 @@ add_library(MinecraftClient SHARED
     src/dllmain.cpp
     src/jni/JNIUtils.cpp
     src/jni/JNIUtils.h
+    src/jni/MappingLoader.cpp
+    src/jni/MappingLoader.h
     src/jni/MinecraftClasses.cpp
     src/jni/MinecraftClasses.h
     src/core/Module.cpp
@@ -39,6 +41,9 @@ add_library(MinecraftClient SHARED
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/jni/jni/jvm.lib")
     target_link_libraries(MinecraftClient ${CMAKE_SOURCE_DIR}/src/jni/jni/jvm.lib)
 endif()
+
+# Link OpenGL for ESP rendering
+target_link_libraries(MinecraftClient opengl32)
 
 # Injector executable
 add_executable(Injector

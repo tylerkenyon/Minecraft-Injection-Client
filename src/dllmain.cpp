@@ -3,6 +3,7 @@
 #include <array>
 #include "utils/Logger.h"
 #include "jni/JNIUtils.h"
+#include "jni/MappingLoader.h"
 #include "jni/MinecraftClasses.h"
 #include "core/ModuleManager.h"
 #include "core/EventBus.h"
@@ -24,6 +25,10 @@ void ClientMain() {
     }
     
     LOG_INFO("Successfully attached to JVM");
+    
+    // Initialize MCP mappings
+    auto& mappings = MappingLoader::getInstance();
+    mappings.initialize(); // Load MCP mappings from src/mappings
     
     // Initialize Minecraft classes
     auto& mc = MinecraftClasses::getInstance();
