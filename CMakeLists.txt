@@ -4,11 +4,14 @@ project(MinecraftInjectionClient)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find JDK for JNI headers
-find_package(JNI REQUIRED)
-include_directories(${JNI_INCLUDE_DIRS})
+# Disable CRT security warnings (fixes localtime warning)
+add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 
-# Common include directories
+# Use local JNI headers - adjust path based on where your jni folder is
+# According to your screenshot, JNI files are in src/jni/jni/
+include_directories(${CMAKE_SOURCE_DIR}/src/jni/jni)
+
+# Common include directories - this allows all source files to find headers
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
 # Client DLL (the injectable library)
@@ -32,7 +35,10 @@ add_library(MinecraftClient SHARED
     src/utils/Logger.h
 )
 
-target_link_libraries(MinecraftClient ${JNI_LIBRARIES})
+# Only link jvm.lib if it exists in your jni folder
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/jni/jni/jvm.lib")
+    target_link_libraries(MinecraftClient ${CMAKE_SOURCE_DIR}/src/jni/jni/jvm.lib)
+endif()
 
 # Injector executable
 add_executable(Injector
