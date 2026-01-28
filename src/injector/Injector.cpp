@@ -1,7 +1,6 @@
 #include "Injector.h"
 #include <TlHelp32.h>
 #include <iostream>
-#include <memory>
 
 bool Injector::enableDebugPrivilege() {
     HANDLE hToken = nullptr;
@@ -25,8 +24,9 @@ bool Injector::enableDebugPrivilege() {
         return false;
     }
 
+    DWORD adjustError = GetLastError();
     CloseHandle(hToken);
-    return GetLastError() == ERROR_SUCCESS;
+    return adjustError == ERROR_SUCCESS;
 }
 
 DWORD Injector::getProcessIdByName(const std::string& processName) {
@@ -101,7 +101,13 @@ bool Injector::performInjection(HANDLE hProcess, const std::string& dllPath) {
     // Wait for thread to finish
     WaitForSingleObject(hThread, INFINITE);
     DWORD remoteExitCode = 0;
-    if (!GetExitCodeThread(hThread, &remoteExitCode) || remoteExitCode == 0) {
+    if (!GetExitCodeThread(hThread, &remoteExitCode)) {
+        std::cerr << "Failed to read remote thread exit code" << std::endl;
+        CloseHandle(hThread);
+        VirtualFreeEx(hProcess, pRemotePath, 0, MEM_RELEASE);
+        return false;
+    }
+    if (remoteExitCode == 0) {
         std::cerr << "Remote LoadLibrary failed in target process" << std::endl;
         CloseHandle(hThread);
         VirtualFreeEx(hProcess, pRemotePath, 0, MEM_RELEASE);
