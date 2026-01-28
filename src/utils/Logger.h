@@ -5,6 +5,10 @@
 #include <mutex>
 #include <ctime>
 
+#ifdef ERROR
+#undef ERROR
+#endif
+
 class Logger {
 public:
     enum Level {
