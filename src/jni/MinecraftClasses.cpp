@@ -106,10 +106,25 @@ bool MinecraftClasses::findEntityPlayerClass() {
     
     LOG_INFO("Found EntityPlayerSP class");
     
-    // Get capabilities field
+    // Get capabilities field - try deobfuscated name first
     capabilitiesField = jni.getFieldID(entityPlayerClass, "capabilities", "Lnet/minecraft/entity/player/PlayerCapabilities;");
     if (!capabilitiesField) {
+        // Try known obfuscated signature
         capabilitiesField = jni.getFieldID(entityPlayerClass, "bW", "Lrz;");
+    }
+    if (!capabilitiesField) {
+        // Use introspection to find by signature
+        capabilitiesField = jni.findFieldBySignature(entityPlayerClass, "Lrz;");
+    }
+    if (!capabilitiesField) {
+        // Last resort - try deobfuscated signature
+        capabilitiesField = jni.findFieldBySignature(entityPlayerClass, "Lnet/minecraft/entity/player/PlayerCapabilities;");
+    }
+    
+    if (!capabilitiesField) {
+        LOG_ERROR("Could not find capabilities field in EntityPlayerSP");
+    } else {
+        LOG_INFO("Found capabilities field");
     }
     
     return true;
@@ -130,35 +145,51 @@ bool MinecraftClasses::findEntityClass() {
     
     LOG_INFO("Found Entity class");
     
-    // Get position fields
+    // Get position fields - try deobfuscated names first
+    // In Entity class, posX/Y/Z are typically the first 3 double fields
     entityFields.posX = jni.getFieldID(entityClass, "posX", "D");
     if (!entityFields.posX) entityFields.posX = jni.getFieldID(entityClass, "s", "D");
+    if (!entityFields.posX) entityFields.posX = jni.findDoubleField(entityClass, 0);
     
     entityFields.posY = jni.getFieldID(entityClass, "posY", "D");
     if (!entityFields.posY) entityFields.posY = jni.getFieldID(entityClass, "t", "D");
+    if (!entityFields.posY) entityFields.posY = jni.findDoubleField(entityClass, 1);
     
     entityFields.posZ = jni.getFieldID(entityClass, "posZ", "D");
     if (!entityFields.posZ) entityFields.posZ = jni.getFieldID(entityClass, "u", "D");
+    if (!entityFields.posZ) entityFields.posZ = jni.findDoubleField(entityClass, 2);
     
-    // Get rotation fields
+    // Get rotation fields (typically among first float fields)
     entityFields.rotationYaw = jni.getFieldID(entityClass, "rotationYaw", "F");
     if (!entityFields.rotationYaw) entityFields.rotationYaw = jni.getFieldID(entityClass, "y", "F");
+    if (!entityFields.rotationYaw) entityFields.rotationYaw = jni.findFloatField(entityClass, 0);
     
     entityFields.rotationPitch = jni.getFieldID(entityClass, "rotationPitch", "F");
     if (!entityFields.rotationPitch) entityFields.rotationPitch = jni.getFieldID(entityClass, "z", "F");
+    if (!entityFields.rotationPitch) entityFields.rotationPitch = jni.findFloatField(entityClass, 1);
     
-    // Get motion fields
+    // Get motion fields (typically indices 3-5 for double fields)
     entityFields.motionX = jni.getFieldID(entityClass, "motionX", "D");
     if (!entityFields.motionX) entityFields.motionX = jni.getFieldID(entityClass, "v", "D");
+    if (!entityFields.motionX) entityFields.motionX = jni.findDoubleField(entityClass, 3);
     
     entityFields.motionY = jni.getFieldID(entityClass, "motionY", "D");
     if (!entityFields.motionY) entityFields.motionY = jni.getFieldID(entityClass, "w", "D");
+    if (!entityFields.motionY) entityFields.motionY = jni.findDoubleField(entityClass, 4);
     
     entityFields.motionZ = jni.getFieldID(entityClass, "motionZ", "D");
     if (!entityFields.motionZ) entityFields.motionZ = jni.getFieldID(entityClass, "x", "D");
+    if (!entityFields.motionZ) entityFields.motionZ = jni.findDoubleField(entityClass, 5);
     
     entityFields.onGround = jni.getFieldID(entityClass, "onGround", "Z");
     if (!entityFields.onGround) entityFields.onGround = jni.getFieldID(entityClass, "C", "Z");
+    // Could use findBooleanField here if needed, but onGround is less critical
+    
+    if (entityFields.posX && entityFields.posY && entityFields.posZ) {
+        LOG_INFO("Found Entity position fields");
+    } else {
+        LOG_ERROR("Failed to find some Entity position fields");
+    }
     
     return true;
 }
@@ -203,25 +234,53 @@ bool MinecraftClasses::findPlayerCapabilitiesClass() {
     
     LOG_INFO("Found PlayerCapabilities class");
     
-    // Get capability fields
+    // Get capability fields - try deobfuscated names first
+    // PlayerCapabilities has 4 boolean fields in order:
+    // 0: disableDamage (a)
+    // 1: allowFlying (b)  
+    // 2: isFlying (c)
+    // 3: isCreativeMode (d)
+    
     playerCapabilities.isFlying = jni.getFieldID(playerCapabilitiesClass, "isFlying", "Z");
     if (!playerCapabilities.isFlying) {
         playerCapabilities.isFlying = jni.getFieldID(playerCapabilitiesClass, "c", "Z");
+    }
+    if (!playerCapabilities.isFlying) {
+        // Use introspection - isFlying is the 3rd boolean field (index 2)
+        playerCapabilities.isFlying = jni.findBooleanField(playerCapabilitiesClass, 2);
     }
     
     playerCapabilities.allowFlying = jni.getFieldID(playerCapabilitiesClass, "allowFlying", "Z");
     if (!playerCapabilities.allowFlying) {
         playerCapabilities.allowFlying = jni.getFieldID(playerCapabilitiesClass, "b", "Z");
     }
+    if (!playerCapabilities.allowFlying) {
+        // Use introspection - allowFlying is the 2nd boolean field (index 1)
+        playerCapabilities.allowFlying = jni.findBooleanField(playerCapabilitiesClass, 1);
+    }
     
     playerCapabilities.disableDamage = jni.getFieldID(playerCapabilitiesClass, "disableDamage", "Z");
     if (!playerCapabilities.disableDamage) {
         playerCapabilities.disableDamage = jni.getFieldID(playerCapabilitiesClass, "a", "Z");
     }
+    if (!playerCapabilities.disableDamage) {
+        // Use introspection - disableDamage is the 1st boolean field (index 0)
+        playerCapabilities.disableDamage = jni.findBooleanField(playerCapabilitiesClass, 0);
+    }
     
     playerCapabilities.isCreativeMode = jni.getFieldID(playerCapabilitiesClass, "isCreativeMode", "Z");
     if (!playerCapabilities.isCreativeMode) {
         playerCapabilities.isCreativeMode = jni.getFieldID(playerCapabilitiesClass, "d", "Z");
+    }
+    if (!playerCapabilities.isCreativeMode) {
+        // Use introspection - isCreativeMode is the 4th boolean field (index 3)
+        playerCapabilities.isCreativeMode = jni.findBooleanField(playerCapabilitiesClass, 3);
+    }
+    
+    if (playerCapabilities.isFlying && playerCapabilities.allowFlying) {
+        LOG_INFO("Found PlayerCapabilities boolean fields");
+    } else {
+        LOG_ERROR("Failed to find some PlayerCapabilities fields");
     }
     
     return true;
@@ -258,4 +317,8 @@ jobject MinecraftClasses::getTheWorld() {
 
 jfieldID MinecraftClasses::getLoadedEntityList() {
     return loadedEntityListField;
+}
+
+jfieldID MinecraftClasses::getCapabilitiesField() {
+    return capabilitiesField;
 }

@@ -39,36 +39,23 @@ void Flight::setFlying(bool flying) {
         return;
     }
     
-    // Get player capabilities field
-    auto& caps = mc.getPlayerCapabilities();
-    JNIEnv* env = jni.getEnv();
-    
-    // Get capabilities object from player
-    jfieldID capabilitiesField = jni.getFieldID(
-        env->GetObjectClass(player), 
-        "capabilities", 
-        "Lnet/minecraft/entity/player/PlayerCapabilities;"
-    );
-    
-    if (!capabilitiesField) {
-        // Try obfuscated name
-        capabilitiesField = jni.getFieldID(
-            env->GetObjectClass(player), 
-            "bW", 
-            "Lrz;"
-        );
-    }
+    // Get player capabilities field from MinecraftClasses
+    jfieldID capabilitiesField = mc.getCapabilitiesField();
     
     if (!capabilitiesField) {
         LOG_ERROR("Could not find capabilities field");
         return;
     }
     
+    // Get capabilities object from player
     jobject capabilities = jni.getObjectField(player, capabilitiesField);
     if (!capabilities) {
         LOG_ERROR("Could not get capabilities object");
         return;
     }
+    
+    // Get capability field IDs
+    auto& caps = mc.getPlayerCapabilities();
     
     // Set allowFlying and isFlying
     if (caps.allowFlying) {
