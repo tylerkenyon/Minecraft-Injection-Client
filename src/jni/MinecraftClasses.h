@@ -47,8 +47,8 @@ public:
     
     EntityFields& getEntityFields() { return entityFields; }
     
-    // World methods
-    jmethodID getLoadedEntityList();
+    // World fields
+    jfieldID getLoadedEntityList();
     
 private:
     MinecraftClasses();
@@ -71,8 +71,8 @@ private:
     jfieldID theWorldField;
     jfieldID capabilitiesField;
     
-    jmethodID loadedEntityListMethod;
-    
+    jfieldID loadedEntityListField;
+
     PlayerCapabilities playerCapabilities;
     EntityFields entityFields;
     
