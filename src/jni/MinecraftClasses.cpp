@@ -17,7 +17,7 @@ MinecraftClasses::MinecraftClasses()
     , thePlayerField(nullptr)
     , theWorldField(nullptr)
     , capabilitiesField(nullptr)
-    , loadedEntityListMethod(nullptr)
+    , loadedEntityListField(nullptr)
     , initialized(false) {
 }
 
@@ -180,9 +180,9 @@ bool MinecraftClasses::findWorldClass() {
     
     // Get loadedEntityList field (it's actually a field, not a method)
     // We'll use getFieldID instead
-    loadedEntityListMethod = jni.getFieldID(worldClass, "loadedEntityList", "Ljava/util/List;");
-    if (!loadedEntityListMethod) {
-        loadedEntityListMethod = jni.getFieldID(worldClass, "h", "Ljava/util/List;");
+    loadedEntityListField = jni.getFieldID(worldClass, "loadedEntityList", "Ljava/util/List;");
+    if (!loadedEntityListField) {
+        loadedEntityListField = jni.getFieldID(worldClass, "h", "Ljava/util/List;");
     }
     
     return true;
@@ -256,6 +256,6 @@ jobject MinecraftClasses::getTheWorld() {
     return jni.getObjectField(minecraft, theWorldField);
 }
 
-jmethodID MinecraftClasses::getLoadedEntityList() {
-    return loadedEntityListMethod;
+jfieldID MinecraftClasses::getLoadedEntityList() {
+    return loadedEntityListField;
 }
