@@ -222,3 +222,194 @@ jobject JNIUtils::callObjectMethod(jobject obj, jmethodID methodID, ...) {
     
     return result;
 }
+
+jfieldID JNIUtils::findFieldBySignature(jclass clazz, const std::string& signature) {
+    if (!env || !clazz) return nullptr;
+    
+    // Get the Class object methods
+    jclass classClass = env->FindClass("java/lang/Class");
+    if (!classClass) return nullptr;
+    
+    jmethodID getDeclaredFieldsMethod = env->GetMethodID(classClass, "getDeclaredFields", "()[Ljava/lang/reflect/Field;");
+    if (!getDeclaredFieldsMethod) {
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    // Get all fields
+    jobjectArray fields = (jobjectArray)env->CallObjectMethod(clazz, getDeclaredFieldsMethod);
+    if (!fields) {
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    jint fieldCount = env->GetArrayLength(fields);
+    
+    // Get Field class methods
+    jclass fieldClass = env->FindClass("java/lang/reflect/Field");
+    jmethodID getNameMethod = env->GetMethodID(fieldClass, "getName", "()Ljava/lang/String;");
+    jmethodID getTypeMethod = env->GetMethodID(fieldClass, "getType", "()Ljava/lang/Class;");
+    
+    if (!getNameMethod || !getTypeMethod) {
+        env->DeleteLocalRef(fields);
+        env->DeleteLocalRef(fieldClass);
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    jclass typeClass = env->FindClass("java/lang/Class");
+    jmethodID getNameTypeMethod = env->GetMethodID(typeClass, "getName", "()Ljava/lang/String;");
+    
+    jfieldID result = nullptr;
+    
+    // Iterate through fields
+    for (jint i = 0; i < fieldCount; i++) {
+        jobject field = env->GetObjectArrayElement(fields, i);
+        if (!field) continue;
+        
+        // Get field type
+        jobject fieldType = env->CallObjectMethod(field, getTypeMethod);
+        if (!fieldType) {
+            env->DeleteLocalRef(field);
+            continue;
+        }
+        
+        // Get type name
+        jstring typeName = (jstring)env->CallObjectMethod(fieldType, getNameTypeMethod);
+        if (!typeName) {
+            env->DeleteLocalRef(fieldType);
+            env->DeleteLocalRef(field);
+            continue;
+        }
+        
+        const char* typeStr = env->GetStringUTFChars(typeName, nullptr);
+        std::string typeString(typeStr);
+        env->ReleaseStringUTFChars(typeName, typeStr);
+        
+        // Convert signature to Java class name format
+        std::string targetType = signature;
+        // Convert signature like "Lrz;" to "rz"
+        if (targetType.size() > 2 && targetType[0] == 'L' && targetType[targetType.size()-1] == ';') {
+            targetType = targetType.substr(1, targetType.size() - 2);
+            // Replace / with .
+            for (size_t j = 0; j < targetType.size(); j++) {
+                if (targetType[j] == '/') targetType[j] = '.';
+            }
+        }
+        
+        // Check if type matches
+        if (typeString == targetType) {
+            // Get field name
+            jstring fieldName = (jstring)env->CallObjectMethod(field, getNameMethod);
+            const char* nameStr = env->GetStringUTFChars(fieldName, nullptr);
+            std::string fieldNameStr(nameStr);
+            env->ReleaseStringUTFChars(fieldName, nameStr);
+            
+            // Get the field ID
+            result = env->GetFieldID(clazz, fieldNameStr.c_str(), signature.c_str());
+            
+            env->DeleteLocalRef(fieldName);
+            env->DeleteLocalRef(typeName);
+            env->DeleteLocalRef(fieldType);
+            env->DeleteLocalRef(field);
+            break;
+        }
+        
+        env->DeleteLocalRef(typeName);
+        env->DeleteLocalRef(fieldType);
+        env->DeleteLocalRef(field);
+    }
+    
+    env->DeleteLocalRef(typeClass);
+    env->DeleteLocalRef(fieldClass);
+    env->DeleteLocalRef(fields);
+    env->DeleteLocalRef(classClass);
+    
+    return result;
+}
+
+jfieldID JNIUtils::findBooleanField(jclass clazz, int index) {
+    if (!env || !clazz) return nullptr;
+    
+    // Get the Class object methods
+    jclass classClass = env->FindClass("java/lang/Class");
+    if (!classClass) return nullptr;
+    
+    jmethodID getDeclaredFieldsMethod = env->GetMethodID(classClass, "getDeclaredFields", "()[Ljava/lang/reflect/Field;");
+    if (!getDeclaredFieldsMethod) {
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    // Get all fields
+    jobjectArray fields = (jobjectArray)env->CallObjectMethod(clazz, getDeclaredFieldsMethod);
+    if (!fields) {
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    jint fieldCount = env->GetArrayLength(fields);
+    
+    // Get Field class methods
+    jclass fieldClass = env->FindClass("java/lang/reflect/Field");
+    jmethodID getNameMethod = env->GetMethodID(fieldClass, "getName", "()Ljava/lang/String;");
+    jmethodID getTypeMethod = env->GetMethodID(fieldClass, "getType", "()Ljava/lang/Class;");
+    
+    if (!getNameMethod || !getTypeMethod) {
+        env->DeleteLocalRef(fields);
+        env->DeleteLocalRef(fieldClass);
+        env->DeleteLocalRef(classClass);
+        return nullptr;
+    }
+    
+    jclass boolClass = env->FindClass("java/lang/Boolean");
+    jmethodID typeMethod = env->GetStaticMethodID(boolClass, "TYPE", "Ljava/lang/Class;");
+    jobject boolType = env->CallStaticObjectMethod(boolClass, typeMethod);
+    
+    jfieldID result = nullptr;
+    int currentIndex = 0;
+    
+    // Iterate through fields looking for boolean fields
+    for (jint i = 0; i < fieldCount; i++) {
+        jobject field = env->GetObjectArrayElement(fields, i);
+        if (!field) continue;
+        
+        // Get field type
+        jobject fieldType = env->CallObjectMethod(field, getTypeMethod);
+        if (!fieldType) {
+            env->DeleteLocalRef(field);
+            continue;
+        }
+        
+        // Check if it's a boolean
+        if (env->IsSameObject(fieldType, boolType)) {
+            if (currentIndex == index) {
+                // Get field name
+                jstring fieldName = (jstring)env->CallObjectMethod(field, getNameMethod);
+                const char* nameStr = env->GetStringUTFChars(fieldName, nullptr);
+                std::string fieldNameStr(nameStr);
+                env->ReleaseStringUTFChars(fieldName, nameStr);
+                
+                // Get the field ID
+                result = env->GetFieldID(clazz, fieldNameStr.c_str(), "Z");
+                
+                env->DeleteLocalRef(fieldName);
+                env->DeleteLocalRef(fieldType);
+                env->DeleteLocalRef(field);
+                break;
+            }
+            currentIndex++;
+        }
+        
+        env->DeleteLocalRef(fieldType);
+        env->DeleteLocalRef(field);
+    }
+    
+    env->DeleteLocalRef(boolType);
+    env->DeleteLocalRef(boolClass);
+    env->DeleteLocalRef(fieldClass);
+    env->DeleteLocalRef(fields);
+    env->DeleteLocalRef(classClass);
+    
+    return result;
+}

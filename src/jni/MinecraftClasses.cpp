@@ -106,10 +106,25 @@ bool MinecraftClasses::findEntityPlayerClass() {
     
     LOG_INFO("Found EntityPlayerSP class");
     
-    // Get capabilities field
+    // Get capabilities field - try deobfuscated name first
     capabilitiesField = jni.getFieldID(entityPlayerClass, "capabilities", "Lnet/minecraft/entity/player/PlayerCapabilities;");
     if (!capabilitiesField) {
+        // Try known obfuscated signature
         capabilitiesField = jni.getFieldID(entityPlayerClass, "bW", "Lrz;");
+    }
+    if (!capabilitiesField) {
+        // Use introspection to find by signature
+        capabilitiesField = jni.findFieldBySignature(entityPlayerClass, "Lrz;");
+    }
+    if (!capabilitiesField) {
+        // Last resort - try deobfuscated signature
+        capabilitiesField = jni.findFieldBySignature(entityPlayerClass, "Lnet/minecraft/entity/player/PlayerCapabilities;");
+    }
+    
+    if (!capabilitiesField) {
+        LOG_ERROR("Could not find capabilities field in EntityPlayerSP");
+    } else {
+        LOG_INFO("Found capabilities field");
     }
     
     return true;
@@ -203,25 +218,53 @@ bool MinecraftClasses::findPlayerCapabilitiesClass() {
     
     LOG_INFO("Found PlayerCapabilities class");
     
-    // Get capability fields
+    // Get capability fields - try deobfuscated names first
+    // PlayerCapabilities has 4 boolean fields in order:
+    // 0: disableDamage (a)
+    // 1: allowFlying (b)  
+    // 2: isFlying (c)
+    // 3: isCreativeMode (d)
+    
     playerCapabilities.isFlying = jni.getFieldID(playerCapabilitiesClass, "isFlying", "Z");
     if (!playerCapabilities.isFlying) {
         playerCapabilities.isFlying = jni.getFieldID(playerCapabilitiesClass, "c", "Z");
+    }
+    if (!playerCapabilities.isFlying) {
+        // Use introspection - isFlying is the 3rd boolean field (index 2)
+        playerCapabilities.isFlying = jni.findBooleanField(playerCapabilitiesClass, 2);
     }
     
     playerCapabilities.allowFlying = jni.getFieldID(playerCapabilitiesClass, "allowFlying", "Z");
     if (!playerCapabilities.allowFlying) {
         playerCapabilities.allowFlying = jni.getFieldID(playerCapabilitiesClass, "b", "Z");
     }
+    if (!playerCapabilities.allowFlying) {
+        // Use introspection - allowFlying is the 2nd boolean field (index 1)
+        playerCapabilities.allowFlying = jni.findBooleanField(playerCapabilitiesClass, 1);
+    }
     
     playerCapabilities.disableDamage = jni.getFieldID(playerCapabilitiesClass, "disableDamage", "Z");
     if (!playerCapabilities.disableDamage) {
         playerCapabilities.disableDamage = jni.getFieldID(playerCapabilitiesClass, "a", "Z");
     }
+    if (!playerCapabilities.disableDamage) {
+        // Use introspection - disableDamage is the 1st boolean field (index 0)
+        playerCapabilities.disableDamage = jni.findBooleanField(playerCapabilitiesClass, 0);
+    }
     
     playerCapabilities.isCreativeMode = jni.getFieldID(playerCapabilitiesClass, "isCreativeMode", "Z");
     if (!playerCapabilities.isCreativeMode) {
         playerCapabilities.isCreativeMode = jni.getFieldID(playerCapabilitiesClass, "d", "Z");
+    }
+    if (!playerCapabilities.isCreativeMode) {
+        // Use introspection - isCreativeMode is the 4th boolean field (index 3)
+        playerCapabilities.isCreativeMode = jni.findBooleanField(playerCapabilitiesClass, 3);
+    }
+    
+    if (playerCapabilities.isFlying && playerCapabilities.allowFlying) {
+        LOG_INFO("Found PlayerCapabilities boolean fields");
+    } else {
+        LOG_ERROR("Failed to find some PlayerCapabilities fields");
     }
     
     return true;
@@ -258,4 +301,8 @@ jobject MinecraftClasses::getTheWorld() {
 
 jfieldID MinecraftClasses::getLoadedEntityList() {
     return loadedEntityListField;
+}
+
+jfieldID MinecraftClasses::getCapabilitiesField() {
+    return capabilitiesField;
 }

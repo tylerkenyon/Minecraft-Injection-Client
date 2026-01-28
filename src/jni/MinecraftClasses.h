@@ -50,6 +50,9 @@ public:
     // World fields
     jfieldID getLoadedEntityList();
     
+    // Get the capabilities field from EntityPlayerSP
+    jfieldID getCapabilitiesField();
+    
 private:
     MinecraftClasses();
     ~MinecraftClasses();
