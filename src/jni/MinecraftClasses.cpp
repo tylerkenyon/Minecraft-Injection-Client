@@ -53,7 +53,6 @@ bool MinecraftClasses::initialize() {
 
 bool MinecraftClasses::findMinecraftClass() {
     auto& jni = JNIUtils::getInstance();
-    auto& mappings = MappingLoader::getInstance();
     
     // Try to find Minecraft class (MCP name in 1.8.9)
     minecraftClass = jni.findClass("net/minecraft/client/Minecraft");
@@ -95,7 +94,6 @@ bool MinecraftClasses::findMinecraftClass() {
 
 bool MinecraftClasses::findEntityPlayerClass() {
     auto& jni = JNIUtils::getInstance();
-    auto& mappings = MappingLoader::getInstance();
     
     entityPlayerClass = jni.findClass("net/minecraft/client/entity/EntityPlayerSP");
     
@@ -135,7 +133,6 @@ bool MinecraftClasses::findEntityPlayerClass() {
 
 bool MinecraftClasses::findEntityClass() {
     auto& jni = JNIUtils::getInstance();
-    auto& mappings = MappingLoader::getInstance();
     
     entityClass = jni.findClass("net/minecraft/entity/Entity");
     
@@ -204,7 +201,6 @@ bool MinecraftClasses::findEntityClass() {
 
 bool MinecraftClasses::findWorldClass() {
     auto& jni = JNIUtils::getInstance();
-    auto& mappings = MappingLoader::getInstance();
     
     worldClass = jni.findClass("net/minecraft/world/World");
     
@@ -229,7 +225,6 @@ bool MinecraftClasses::findWorldClass() {
 
 bool MinecraftClasses::findPlayerCapabilitiesClass() {
     auto& jni = JNIUtils::getInstance();
-    auto& mappings = MappingLoader::getInstance();
     
     playerCapabilitiesClass = jni.findClass("net/minecraft/entity/player/PlayerCapabilities");
     
