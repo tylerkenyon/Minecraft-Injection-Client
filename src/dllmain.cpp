@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <thread>
+#include <array>
 #include "utils/Logger.h"
 #include "jni/JNIUtils.h"
 #include "jni/MinecraftClasses.h"
@@ -72,29 +73,46 @@ void ClientMain() {
             LOG_DEBUG("Client running - Tick: " + std::to_string(tickCount));
         }
         
-        // Handle keyboard input (simplified - in production use proper input hooks)
-        if (GetAsyncKeyState(VK_F1) & 0x8000) {
+        // Check module keybinds (edge-triggered)
+        static std::array<bool, 256> wasKeyDown{};
+        bool listModules = false;
+        bool shutdownClient = false;
+        for (const auto& module : moduleManager.getModules()) {
+            int keyBind = module->getKeyBind();
+            if (keyBind == 0 || keyBind >= static_cast<int>(wasKeyDown.size())) {
+                continue;
+            }
+
+            bool isDown = (GetAsyncKeyState(keyBind) & 0x8000) != 0;
+            if (isDown && !wasKeyDown[keyBind]) {
+                module->toggle();
+                if (module->isEnabled()) {
+                    KeyPressEvent keyEvent(keyBind);
+                    module->onKeyPress(keyEvent);
+                }
+            }
+            wasKeyDown[keyBind] = isDown;
+        }
+
+        bool f1Down = (GetAsyncKeyState(VK_F1) & 0x8000) != 0;
+        listModules = f1Down && !wasKeyDown[VK_F1];
+        wasKeyDown[VK_F1] = f1Down;
+
+        bool endDown = (GetAsyncKeyState(VK_END) & 0x8000) != 0;
+        shutdownClient = endDown && !wasKeyDown[VK_END];
+        wasKeyDown[VK_END] = endDown;
+
+        if (listModules) {
             LOG_INFO("F1 pressed - listing modules:");
             for (const auto& module : moduleManager.getModules()) {
                 LOG_INFO("  " + module->getName() + ": " + 
                         (module->isEnabled() ? "ENABLED" : "DISABLED"));
             }
-            Sleep(300); // Debounce
         }
-        
-        if (GetAsyncKeyState(VK_END) & 0x8000) {
+
+        if (shutdownClient) {
             LOG_INFO("END pressed - shutting down client");
             break;
-        }
-        
-        // Check module keybinds
-        for (const auto& module : moduleManager.getModules()) {
-            int keyBind = module->getKeyBind();
-            if (keyBind != 0 && (GetAsyncKeyState(keyBind) & 0x8000)) {
-                KeyPressEvent keyEvent(keyBind);
-                eventBus.post(keyEvent);
-                Sleep(300); // Debounce
-            }
         }
     }
     

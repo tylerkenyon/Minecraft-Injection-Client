@@ -2,6 +2,33 @@
 #include <TlHelp32.h>
 #include <iostream>
 
+bool Injector::enableDebugPrivilege() {
+    HANDLE hToken = nullptr;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
+        return false;
+    }
+
+    TOKEN_PRIVILEGES tp{};
+    LUID luid{};
+    if (!LookupPrivilegeValue(nullptr, SE_DEBUG_NAME, &luid)) {
+        CloseHandle(hToken);
+        return false;
+    }
+
+    tp.PrivilegeCount = 1;
+    tp.Privileges[0].Luid = luid;
+    tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+    if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(tp), nullptr, nullptr)) {
+        CloseHandle(hToken);
+        return false;
+    }
+
+    DWORD adjustError = GetLastError();
+    CloseHandle(hToken);
+    return adjustError == ERROR_SUCCESS;
+}
+
 DWORD Injector::getProcessIdByName(const std::string& processName) {
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     
@@ -16,7 +43,7 @@ DWORD Injector::getProcessIdByName(const std::string& processName) {
     
     if (Process32First(hSnapshot, &pe32)) {
         do {
-            if (processName == pe32.szExeFile) {
+            if (_stricmp(processName.c_str(), pe32.szExeFile) == 0) {
                 processId = pe32.th32ProcessID;
                 break;
             }
@@ -73,6 +100,19 @@ bool Injector::performInjection(HANDLE hProcess, const std::string& dllPath) {
     
     // Wait for thread to finish
     WaitForSingleObject(hThread, INFINITE);
+    DWORD remoteExitCode = 0;
+    if (!GetExitCodeThread(hThread, &remoteExitCode)) {
+        std::cerr << "Failed to read remote thread exit code" << std::endl;
+        CloseHandle(hThread);
+        VirtualFreeEx(hProcess, pRemotePath, 0, MEM_RELEASE);
+        return false;
+    }
+    if (remoteExitCode == 0) {
+        std::cerr << "Remote LoadLibrary failed in target process" << std::endl;
+        CloseHandle(hThread);
+        VirtualFreeEx(hProcess, pRemotePath, 0, MEM_RELEASE);
+        return false;
+    }
     
     // Cleanup
     CloseHandle(hThread);
@@ -93,9 +133,18 @@ bool Injector::injectDLL(const std::string& processName, const std::string& dllP
 }
 
 bool Injector::injectDLL(DWORD processId, const std::string& dllPath) {
+    if (GetFileAttributesA(dllPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        std::cerr << "DLL not found: " << dllPath << std::endl;
+        return false;
+    }
+
+    if (!enableDebugPrivilege()) {
+        std::cerr << "Warning: Failed to enable SeDebugPrivilege" << std::endl;
+    }
+
     // Open target process
     HANDLE hProcess = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | 
-                                  PROCESS_VM_WRITE | PROCESS_VM_READ, 
+                                  PROCESS_VM_WRITE | PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, 
                                   FALSE, processId);
     
     if (!hProcess) {
