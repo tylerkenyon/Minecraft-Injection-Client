@@ -5,10 +5,11 @@ A modular C++ JNI-based injection client for Minecraft 1.8.9 with expandable mod
 ## Features
 
 - **JNI Integration**: Attaches to the JVM and interacts with Minecraft using JNI
-- **MCP 1.8.9 Mappings**: Uses MCP (Mod Coder Pack) 1.8.9 class names with fallback to obfuscated names
+- **MCP Mapping System**: Uses MCP (Mod Coder Pack) 1.8.9 mappings for readable code with obfuscated fallbacks
 - **Modular Architecture**: Easy-to-extend module system with base classes
 - **Event System**: EventBus for inter-module communication
 - **DLL Injection**: Uses CreateRemoteThread for process injection
+- **OpenGL Rendering**: Advanced 3D ESP rendering using OpenGL
 - **Two Injection Methods**:
   - `MinecraftClient.dll` - Manual injection
   - `Injector.exe` - Automatic injection tool
@@ -19,32 +20,46 @@ A modular C++ JNI-based injection client for Minecraft 1.8.9 with expandable mod
 - Toggle with `F` key
 - Enables flight in survival mode
 - Automatically maintains flight capability
+- Uses MCP mappings for clean, maintainable code
 
-### ESP Module
+### ESP Module (Enhanced)
 - Toggle with `E` key
-- Shows entity positions (foundation for rendering through walls)
-- Logs entity coordinates
+- **3D bounding boxes** around entities
+- **Filled and outlined rendering modes**
+- **OpenGL-based rendering** through walls
+- **Configurable colors** and transparency
+- Inspired by nobody-client implementation
+- See [ESP Documentation](docs/ESP_MODULE.md) for details
+
+## Documentation
+
+- **[MCP Mapping System](docs/MAPPINGS.md)** - How the mapping system works
+- **[ESP Module Guide](docs/ESP_MODULE.md)** - Enhanced ESP features and configuration
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│           MinecraftClient.dll           │
-├─────────────────────────────────────────┤
-│  ┌────────────┐      ┌──────────────┐  │
-│  │ JNI Utils  │◄────►│  Minecraft   │  │
-│  │            │      │   Classes    │  │
-│  └────────────┘      └──────────────┘  │
-│         ▲                               │
-│         │                               │
-│  ┌──────┴────────┐   ┌──────────────┐  │
-│  │ ModuleManager │◄──┤   EventBus   │  │
-│  └───────┬───────┘   └──────────────┘  │
-│          │                              │
-│  ┌───────┴────────────────────────┐    │
-│  │  Modules (Flight, ESP, ...)    │    │
-│  └────────────────────────────────┘    │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│           MinecraftClient.dll               │
+├─────────────────────────────────────────────┤
+│  ┌────────────┐      ┌──────────────┐      │
+│  │ JNI Utils  │◄────►│  Minecraft   │      │
+│  │            │      │   Classes    │      │
+│  └────────────┘      └──────┬───────┘      │
+│         ▲                   │               │
+│         │            ┌──────┴────────┐      │
+│         │            │ MappingLoader │      │
+│         │            │  (MCP Names)  │      │
+│         │            └───────────────┘      │
+│  ┌──────┴────────┐   ┌──────────────┐      │
+│  │ ModuleManager │◄──┤   EventBus   │      │
+│  └───────┬───────┘   └──────────────┘      │
+│          │                                  │
+│  ┌───────┴────────────────────────┐        │
+│  │  Modules (Flight, ESP, ...)    │        │
+│  │  + OpenGL Rendering            │        │
+│  └────────────────────────────────┘        │
+└─────────────────────────────────────────────┘
 ```
 
 ## Building
